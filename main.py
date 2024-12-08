@@ -5,14 +5,18 @@ import pacmap
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import warnings
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from sklearn.base import BaseEstimator
 from sklearn.manifold import TSNE
 from sklearn.metrics import adjusted_rand_score
 from sklearn.metrics import homogeneity_score
 from sklearn.metrics import completeness_score
+from sklearn.cluster import KMeans
 from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import dendrogram
+from scipy.cluster.hierarchy import fcluster
+
 
 
 # ======================================================================================================
@@ -184,6 +188,9 @@ print(df_good_looking)
 # расстояний distance_matrix, полученную ранее с помощью функции linkage. Для построения дендрограммы 
 # используется функция dendrogram из библиотеки scipy.cluster.hierarchy, а для отображения графика — 
 # библиотека matplotlib.
+
+# СМОТРИ EXAMPLES/Dendogram_distance_matrix.png
+
 # ======================================================================================================
 
 fig = plt.figure(figsize=(15, 30))
@@ -193,6 +200,74 @@ R = dendrogram(distance_matrix,
                labels = df['surgical_lesion'].to_numpy(),
                orientation='left',
                leaf_font_size=12)
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
+# Код выполняет иерархическую кластеризацию с помощью ранее вычисленной матрицы расстояний и визуализирует 
+# результаты, сравнивая реальные метки классов с результатами кластеризации.
+
+# СМОТРИ EXAMPLES/Comparison_of_real_class_labels_with_clustering_results.png
+
+# ======================================================================================================
+
+cluster_labels = fcluster(distance_matrix, 2, criterion='maxclust')
+known_labels = df['surgical_lesion'].to_numpy()
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+axes[0].scatter(scaled_data[:, 18], scaled_data[:,19], c=known_labels, cmap=plt.cm.Set1)
+axes[1].scatter(scaled_data[:, 18], scaled_data[:,19], c=cluster_labels, cmap=plt.cm.Set2)
+axes[0].set_title(f'Реальные метки кластеров', fontsize=16)
+axes[1].set_title(f'Метки кластеров, найденные алгоритмом', fontsize=16)
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
+# Код сначала оценивает качество кластеризации, сравнив истинные метки классов (known_labels) с метками 
+# кластеров, присвоенными алгоритмом (cluster_labels), с помощью трех метрик: скорректированный индекс 
+# Ренда, однородность и полнота. Затем он визуализирует результаты кластеризации, используя методы 
+# понижения размерности (t-SNE, UMAP, TriMAP и PaCMAP), чтобы отобразить данные в 2D и показать, как 
+# алгоритм разделил объекты на кластеры.
+
+# СМОТРИ EXAMPLES/Visualization_of_clustering_results.png
+
+# ======================================================================================================
+
+evaluate_clustering(known_labels, cluster_labels)
+perform_visualization(scaled_data, cluster_labels)
+
+# =================================== Итерационные алгоритмы. KMeans ===================================
+
+# Код применяет алгоритм KMeans для кластеризации данных. Алгоритм ищет два кластера, используя инициализацию 
+# 'k-means++' и выполняет до 300 итераций с 10 различными начальными точками для повышения стабильности 
+# результата. Затем он визуализирует результаты: на первом графике отображаются реальные метки кластеров, 
+# а на втором — метки, полученные методом KMeans. В обоих графиках на соответствующих точках отображаются 
+# центроиды кластеров (черные точки).
+
+# СМОТРИ EXAMPLES/KMeans_for_data_clustering.png
+
+# ======================================================================================================
+
+warnings.filterwarnings("ignore", message=".*KMeans is known to have a memory leak on Windows.*")
+
+kmeans = KMeans(n_clusters = 2, init = 'k-means++',
+                max_iter = 300, n_init = 10, random_state = 0)
+
+cluster_labels = kmeans.fit_predict(scaled_data)
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+
+axes[0].scatter(scaled_data[:, 18], scaled_data[:, 19], c=known_labels)
+axes[0].scatter(kmeans.cluster_centers_[:, 18], kmeans.cluster_centers_[:, 19],
+                s = 100, c = 'black', label = 'Центроиды')
+axes[0].set_title(f'Реальные метки кластеров', fontsize=16)
+
+axes[1].scatter(scaled_data[:, 18], scaled_data[:,19], c=cluster_labels, cmap=plt.cm.Set2)
+axes[1].scatter(kmeans.cluster_centers_[:, 18], kmeans.cluster_centers_[:, 19],
+                s = 100, c = 'black', label = 'Центроиды')
+axes[1].set_title(f'Метки кластеров, найденные алгоритмом', fontsize=16)
 
 plt.tight_layout()
 plt.show()
