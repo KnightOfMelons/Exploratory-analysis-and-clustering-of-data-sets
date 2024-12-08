@@ -16,7 +16,7 @@ from sklearn.cluster import KMeans
 from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import dendrogram
 from scipy.cluster.hierarchy import fcluster
-
+from fcmeans import FCM
 
 
 # ======================================================================================================
@@ -238,7 +238,8 @@ plt.show()
 evaluate_clustering(known_labels, cluster_labels)
 perform_visualization(scaled_data, cluster_labels)
 
-# =================================== Итерационные алгоритмы. KMeans ===================================
+# =================================== Итерационные алгоритмы ===========================================
+# KMeans.
 
 # Код применяет алгоритм KMeans для кластеризации данных. Алгоритм ищет два кластера, используя инициализацию 
 # 'k-means++' и выполняет до 300 итераций с 10 различными начальными точками для повышения стабильности 
@@ -271,5 +272,58 @@ axes[1].set_title(f'Метки кластеров, найденные алгор
 
 plt.tight_layout()
 plt.show()
+
+# ======================================================================================================
+# Делает всё абсолютно то же, но с KMeans
+
+# СМОТРЕТЬ EXAMPLES/KMeans_visualization_results_clustering.png
+
+# ======================================================================================================
+
+evaluate_clustering(known_labels, cluster_labels)
+perform_visualization(scaled_data, cluster_labels, kmeans.cluster_centers_)
+
+# ======================================================================================================
+# FCM
+
+# Код использует алгоритм Fuzzy C-Means (FCM) для кластеризации данных. В отличие от KMeans, FCM выполняет 
+# мягкую кластеризацию, где каждый объект принадлежит нескольким кластерам с разными степенями принадлежности. 
+# Алгоритм настроен на два кластера, максимальное количество итераций — 300, и используется параметр m=2, 
+# который управляет жесткостью кластеризации (обычно в диапазоне от 1.5 до 2).
+
+# СМОТРЕТЬ main.py EXAMPLES/FCM_for_data_clustering.png
+
+# ======================================================================================================
+
+fcm = FCM(n_clusters=2, m=2, max_iter=300, random_state=0)
+
+fcm.fit(scaled_data)
+
+cluster_labels = fcm.predict(scaled_data)
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+
+axes[0].scatter(scaled_data[:, 18], scaled_data[:,19], c=known_labels)
+axes[0].scatter(fcm.centers[:, 18], fcm.centers[:, 19],
+                s = 100, c = 'black', label = 'Центроиды')
+axes[0].set_title(f'Реальные метки кластеров', fontsize=16)
+
+axes[1].scatter(scaled_data[:, 18], scaled_data[:,19], c=cluster_labels, cmap=plt.cm.Set1)
+axes[1].scatter(fcm.centers[:, 18], fcm.centers[:, 19],
+                s = 100, c = 'black', label = 'Центроиды')
+axes[1].set_title(f'Метки кластеров, найденные алгоритмом', fontsize=16)
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
+# Делается всё то же самое, но для FCM
+
+# СМОТРЕТЬ EXAMPLES/FCM_visualization_results_clustering.png
+
+# ======================================================================================================
+
+evaluate_clustering(known_labels, cluster_labels)
+perform_visualization(scaled_data, cluster_labels, fcm.centers)
 
 # ======================================================================================================
