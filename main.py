@@ -25,6 +25,7 @@ from sklearn.metrics import silhouette_score
 from fcmeans import FCM
 
 
+
 # ======================================================================================================
 # Код сначала загружает данные из файла horse-colic.data, при этом значения ? заменяются на NaN,
 # чтобы их можно было корректно обработать. Затем каждому столбцу присваиваются понятные имена,
@@ -493,10 +494,207 @@ plt.show()
 # критерий maxclust для максимального количества кластеров. Затем метки кластеров передаются в функцию 
 # perform_visualization, которая визуализирует результаты кластеризации с использованием четырёх различных 
 # методов: t-SNE, UMAP, TriMAP и PaCMAP.
+
+# СМОТРЕТЬ EXAMPLES/Second_visualization_results.png
+
 # ======================================================================================================
 
 cluster_labels = fcluster(distance_matrix, 2, criterion='maxclust')
 
-perform_visualization(scaled_data, cluster_labels)
+# perform_visualization(scaled_data, cluster_labels) РАСКОММЕНТИРОВАТЬ ДЛЯ ВИЗУАЛИЗАЦИИ ПОТОМ, СЛИШКОМ ТЯЖЕЛО ДЛЯ НОУТА !!!!!!!!!!
+
+# ================================== Итерационные алгоритмы ============================================
+# Код выполняет кластеризацию данных с использованием алгоритма KMeans для различных чисел кластеров 
+# (от 2 до 10) и рассчитывает два показателя: коэффициент силуэта и внутрикластерное сцепление (WCSS). 
+# Для каждого числа кластеров вычисляются метки кластеров и сохраняются значения WCSS и коэффициента 
+# силуэта. Затем строится график, который отображает два подграфика: один с зависимостью коэффициента 
+# силуэта от числа кластеров, а второй — с зависимостью WCSS (метод локтя) от числа кластеров. Графики 
+# помогают выбрать оптимальное количество кластеров для модели.
+
+# СМОТРЕТЬ 
+
+# ======================================================================================================
+
+WCSS = []
+Silh = []
+
+for i in range(2, 11):
+    kmeans = KMeans(n_clusters = i, init = 'k-means++',
+                    max_iter = 300, n_init = 10, random_state = 0)
+
+    cluster_labels = kmeans.fit_predict(scaled_data)
+
+    WCSS.append(kmeans.inertia_)
+    Silh.append(silhouette_score(scaled_data, cluster_labels, metric='euclidean'))
+
+fig, ax = plt.subplots(1, 2, figsize=(16, 8))
+
+ax[0].plot(range(2, 11), Silh)
+ax[0].set_title('Индекс кластерного анализа (Silhouette score)')
+ax[0].set_xlabel('Число кластеров')
+ax[0].set_ylabel('Silhouette score')
+
+ax[1].plot(range(2, 11), WCSS)
+ax[1].set_title('Метод локтя (elbow method)')
+ax[1].set_xlabel('Число кластеров')
+ax[1].set_ylabel('WCSS')
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
+# KMeans
+
+# Код выполняет кластеризацию данных с использованием алгоритма KMeans с заданным числом кластеров (3). 
+# Алгоритм инициализирует центроиды с помощью метода 'k-means++' для более быстрой сходимости, 
+# выполняется до 300 итераций с 10 различными запусками для нахождения наилучшего решения. Затем, с 
+# помощью метода fit_predict, данные классифицируются в 3 кластера, и метки кластеров сохраняются в 
+# cluster_labels. Наконец, вызывается функция perform_visualization, которая визуализирует результаты 
+# кластеризации, включая центроиды кластеров, используя переданные данные и метки кластеров.
+
+# СМОТРЕТЬ EXAMPLES/KMeans_SECOND_visualization_results_clustering.png
+
+# ======================================================================================================
+
+kmeans = KMeans(n_clusters = 3, init = 'k-means++',
+                    max_iter = 300, n_init = 10, random_state = 0)
+
+cluster_labels = kmeans.fit_predict(scaled_data)
+
+# perform_visualization(scaled_data, cluster_labels, kmeans.cluster_centers_) РАСКОММЕНТИРОВАТЬ ПОТОМ, МНОГО ТРЕБУЕТ МОЩНОСТЕЙ!!!!!!!!
+
+# ======================================================================================================
+# FCM
+
+# Код выполняет кластеризацию данных с использованием нечеткого кластеризатора FCM (Fuzzy C-Means) для 
+# разных чисел кластеров (от 2 до 10). Для каждого числа кластеров создается объект FCM с параметрами, 
+# такими как степень нечеткости m=1.3, максимальное количество итераций max_iter=300 и фиксированное 
+# случайное состояние. Затем применяется метод fit для обучения модели, а метод predict используется для 
+# получения меток кластеров. Коэффициент силуэта для каждой кластеризации вычисляется и сохраняется в 
+# список Silh. После этого строится график, который показывает зависимость коэффициента силуэта от числа 
+# кластеров, помогая оценить, при каком числе кластеров кластеризация дает наилучший результат
+
+# СМОТРЕТЬ EXAMPLES/Silh_SECOND.png
+
+# ======================================================================================================
+
+Silh = []
+
+for i in range(2, 11):
+    fcm = FCM(n_clusters=i, m=1.3, max_iter=300, random_state=0)
+    
+    fcm.fit(scaled_data)
+
+    cluster_labels = fcm.predict(scaled_data)
+
+    Silh.append(silhouette_score(scaled_data, cluster_labels))
+
+fig = plt.figure(figsize = (16, 8))
+
+plt.plot(range(2, 11), Silh)
+plt.title('Индекс кластерного анализа (Silhouette score)')
+plt.xlabel('Число кластеров')
+plt.ylabel('Silhouette score')
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
+# Код выполняет кластеризацию данных с использованием нечеткого метода FCM (Fuzzy C-Means) для разделения 
+# на 2 кластера. Параметр m=2 задаёт степень нечеткости, что влияет на степень "размытия" границ между 
+# кластерами. Алгоритм обучается с помощью метода fit, а затем метки кластеров получаются с помощью 
+# метода predict. После этого вызывается функция perform_visualization, которая визуализирует результаты 
+# кластеризации, включая центры кластеров, передавая данные, метки кластеров и центры кластеров, 
+# полученные из модели.
+
+# СМОТРЕТЬ EXAMPLES/FCM_SECOND_visualization_results_clustering.png
+
+# ======================================================================================================
+
+fcm = FCM(n_clusters=2, m=2, max_iter=300, random_state=0)
+
+fcm.fit(scaled_data)
+
+cluster_labels = fcm.predict(scaled_data)
+
+perform_visualization(scaled_data, cluster_labels, fcm.centers)
+
+# ======================================================================================================
+# DBSCAN
+
+# Код выполняет кластеризацию данных с использованием алгоритма DBSCAN и ищет наилучшие параметры для 
+# этого метода с помощью перебора значений eps и min_samples. Параметры eps и min_samples задаются в сетке 
+# значений, определённой в param_grid. С помощью ParameterGrid происходит перебор всех возможных комбинаций 
+# этих параметров. Для каждой комбинации создаётся объект DBSCAN, который обучается на данных с параметрами 
+# eps и min_samples. Затем рассчитывается коэффициент силуэта для полученных кластеров. Если количество 
+# кластеров больше одного, рассчитывается коэффициент силуэта; если кластеров нет, значение коэффициента 
+# силуэта устанавливается равным -1. Результаты сохраняются в список, который затем преобразуется в 
+# DataFrame для удобства анализа.
+
+# СМОТРЕТЬ EXAMPLES/DBSCAN_SECOND_for_data_clustering_with_automatic_selection_of_parameters.png
+
+# ======================================================================================================
+
+
+param_grid = {
+    'eps': [i / 10 for i in range(1, 10)],
+    'min_samples': [i for i in range(2, 10)]
+}
+
+results = []
+
+for params in ParameterGrid(param_grid):
+    dbscan = DBSCAN(eps=params['eps'], min_samples=params['min_samples'])
+    labels = dbscan.fit_predict(scaled_data)
+
+    if len(set(labels)) > 1:
+        silhouette_avg = silhouette_score(scaled_data, labels)
+    else:
+        silhouette_avg = -1
+
+    results.append({
+        'eps': params['eps'],
+        'min_samples': params['min_samples'],
+        'silhouette_score': silhouette_avg
+    })
+
+results_df = pd.DataFrame(results)
+
+best_params = results_df.loc[results_df['silhouette_score'].idxmax()]
+
+plt.figure(figsize=(16, 8))
+plt.scatter(scaled_data[:, 18], scaled_data[:, 19], c=labels, cmap='viridis', marker='o', alpha=0.5)
+plt.title(f"DBSCAN: eps={best_params['eps']}, min_samples={best_params['min_samples']}, silhouette_score={best_params['silhouette_score']:.2f}")
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
+# Код выполняет кластеризацию данных с использованием алгоритма DBSCAN, а затем оценивает результаты 
+# кластеризации с помощью различных метрик (такое уже было до этого).
+# ======================================================================================================
+
+db = DBSCAN(eps=0.9, min_samples=4).fit(scaled_data)
+
+core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+core_samples_mask[db.core_sample_indices_] = True
+labels = db.labels_
+
+n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+n_noise_ = list(labels).count(-1)
+
+labels_true = df['y']
+
+print('Число кластеров: %d' % n_clusters_)
+print('Число шумовых объектов: %d' % n_noise_)
+print('Homogeneity: %0.3f' % homogeneity_score(labels_true, labels))
+print('Completeness: %0.3f' % completeness_score(labels_true, labels))
+print('V-measure: %0.3f' % v_measure_score(labels_true, labels))
+print('Adjusted Rand Index: %0.3f' % adjusted_rand_score(labels_true, labels))
+print('Adjusted Mutual Information: %0.3f'
+      % adjusted_mutual_info_score(labels_true, labels))
+print('Silhouette score: %0.3f' % silhouette_score(scaled_data, labels))
+
+perform_visualization(scaled_data, labels) # ОТКЛЮЧИТЬ ПОТОМ, МНОГО ТРАТИТ!!!!
 
 # ======================================================================================================
