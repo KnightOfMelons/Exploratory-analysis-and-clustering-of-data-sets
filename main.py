@@ -13,9 +13,13 @@ from sklearn.metrics import adjusted_rand_score
 from sklearn.metrics import homogeneity_score
 from sklearn.metrics import completeness_score
 from sklearn.cluster import KMeans
+from sklearn.cluster import DBSCAN
+from sklearn.metrics import silhouette_score
+from sklearn.model_selection import ParameterGrid
 from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import dendrogram
 from scipy.cluster.hierarchy import fcluster
+from sklearn.metrics import v_measure_score, adjusted_mutual_info_score
 from fcmeans import FCM
 
 
@@ -170,16 +174,6 @@ distance_matrix = linkage(scaled_data, method='ward', metric='euclidean')
 # Можно вывести так, но результат особо понятен не будет.
 # print(distance_matrix)
 
-# Будет что-то типа: 
-
-#array([[2.60000000e+01, 2.33000000e+02, 4.86499635e-05, 2.00000000e+00],
-#       [1.75000000e+02, 2.88000000e+02, 2.06715236e-03, 2.00000000e+00],
-#       [7.30000000e+01, 2.35000000e+02, 2.28654829e-03, 2.00000000e+00],
-#       ...,
-#       [5.93000000e+02, 5.95000000e+02, 9.42958023e+00, 1.23000000e+02],
-#       [5.94000000e+02, 5.96000000e+02, 1.08393604e+01, 2.36000000e+02],
-#       [5.92000000e+02, 5.97000000e+02, 1.14473478e+01, 3.00000000e+02]])
-
 df_good_looking = pd.DataFrame(distance_matrix, columns=['Cluster 1', 'Cluster 2', 'Distance', 'Size'])
 print(df_good_looking)
 
@@ -325,5 +319,94 @@ plt.show()
 
 evaluate_clustering(known_labels, cluster_labels)
 perform_visualization(scaled_data, cluster_labels, fcm.centers)
+
+# ======================================================================================================
+# DBSCAN
+# Перебор значений параметров алгоритма DBSCAN по сетке ParameterGrid
+
+# В коде используется алгоритм DBSCAN (Density-Based Spatial Clustering of Applications with Noise) для 
+# кластеризации данных с автоматическим подбором параметров, таких как eps (максимальное расстояние между 
+# точками в одном кластере) и min_samples (минимальное количество точек для формирования кластера). 
+# Цель — выбрать такие параметры, которые обеспечат наилучшее качество кластеризации, измеряемое с помощью 
+# silhouette score.
+
+# СМОТРЕТЬ EXAMPLES/DBSCAN_for_data_clustering_with_automatic_selection_of_parameters.png
+
+# ======================================================================================================
+
+param_grid = {
+    'eps': [i / 10 for i in range(1, 10)],
+    'min_samples': [i for i in range(3, 29)]
+}
+
+results = []
+
+for params in ParameterGrid(param_grid):
+    dbscan = DBSCAN(eps=params['eps'], min_samples=params['min_samples'])
+    labels = dbscan.fit_predict(scaled_data)
+
+    if len(set(labels)) > 1:
+        silhouette_avg = silhouette_score(scaled_data, labels)
+    else:
+        silhouette_avg = -1
+
+    results.append({
+        'eps': params['eps'],
+        'min_samples': params['min_samples'],
+        'silhouette_score': silhouette_avg
+    })
+
+results_df = pd.DataFrame(results)
+
+best_params = results_df.loc[results_df['silhouette_score'].idxmax()]
+
+plt.figure(figsize=(16, 8))
+plt.scatter(scaled_data[:, 18], scaled_data[:, 19], c=labels, cmap='viridis', marker='o', alpha=0.5)
+plt.title(f"DBSCAN: eps={best_params['eps']}, min_samples={best_params['min_samples']}, silhouette_score={best_params['silhouette_score']:.2f}")
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
+# Код выполняет кластеризацию данных с помощью алгоритма DBSCAN, который находит кластеры на основе 
+# плотности точек и выявляет шумовые объекты, не относящиеся к никакому кластеру. Он применяет DBSCAN с 
+# параметрами eps=0.9 (максимальное расстояние между точками) и min_samples=5 (минимальное количество 
+# точек для формирования кластера). Затем создается маска для выделения основных точек, которые принадлежат 
+# плотным областям кластеров. Код вычисляет количество кластеров и шумовых объектов, а также оценивает 
+# качество кластеризации с использованием различных метрик, таких как однородность, полнота, V-меру, 
+# скорректированный индекс Ранда, скорректированную взаимную информацию и коэффициент силуэта. В результате 
+# выводится информация о числе кластеров, шумовых объектах и качестве кластеризации.
+# ======================================================================================================
+
+db = DBSCAN(eps=0.9, min_samples=5).fit(scaled_data)
+
+core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+core_samples_mask[db.core_sample_indices_] = True
+labels = db.labels_
+
+n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+n_noise_ = list(labels).count(-1)
+
+labels_true = df['surgical_lesion']
+
+print('Число кластеров: %d' % n_clusters_)
+print('Число шумовых объектов: %d' % n_noise_)
+print('Homogeneity: %0.3f' % homogeneity_score(labels_true, labels))
+print('Completeness: %0.3f' % completeness_score(labels_true, labels))
+print('V-measure: %0.3f' % v_measure_score(labels_true, labels))
+print('Adjusted Rand Index: %0.3f' % adjusted_rand_score(labels_true, labels))
+print('Adjusted Mutual Information: %0.3f'
+      % adjusted_mutual_info_score(labels_true, labels))
+print('Silhouette score: %0.3f' % silhouette_score(scaled_data, labels))
+
+# ======================================================================================================
+# Делается всё то же самое, но для DBSCAN
+
+# СМОТРЕТЬ EXAMPLES/DBSCAN_visualization_results_clustering.png
+
+# ======================================================================================================
+
+evaluate_clustering(known_labels, labels)
+perform_visualization(scaled_data, labels)
 
 # ======================================================================================================
