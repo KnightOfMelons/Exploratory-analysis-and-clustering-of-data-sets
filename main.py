@@ -11,6 +11,8 @@ from sklearn.manifold import TSNE
 from sklearn.metrics import adjusted_rand_score
 from sklearn.metrics import homogeneity_score
 from sklearn.metrics import completeness_score
+from scipy.cluster.hierarchy import linkage
+from scipy.cluster.hierarchy import dendrogram
 
 
 # ======================================================================================================
@@ -53,7 +55,7 @@ discrete_columns = ["surgery", "age", "extremities_temp", "peripheral_pulse",
 for col in discrete_columns:
     df[col] = df[col].fillna(df[col].mode()[0])
 
-
+# labels_surgical_lesion = df['surgical_lesion'].to_numpy()
 data = df.drop(columns = ['surgical_lesion']).to_numpy()
 
 scaled_data = MinMaxScaler().fit_transform(data)
@@ -149,3 +151,50 @@ def evaluate_clustering(labels_true, labels_pred):
     print(f'\nСкорректированный индекс Ренда {adjusted_rand_score(labels_true, labels_pred)}\n')
     print(f'Метрика однородности {homogeneity_score(labels_true, labels_pred)}\n')
     print(f'Метрика полноты {completeness_score(labels_true, labels_pred)}\n')
+
+# =========================== Иерархическая алгомеративная кластеризация ===============================
+# Код выполняет иерархическую кластеризацию с использованием метода Уорда. Функция linkage строит матрицу 
+# расстояний между кластерами, используя данные scaled_data, которые были предварительно масштабированы. 
+# В качестве метрики расстояния используется евклидово расстояние, а метод агломерации — метод Уорда, 
+# который минимизирует внутрикластерное рассеяние. Результат работы функции — матрица, где каждая строка 
+# содержит информацию о двух объединённых кластерах: их индексы, расстояние между ними и количество объектов 
+# в новом кластере. 
+# ======================================================================================================
+
+distance_matrix = linkage(scaled_data, method='ward', metric='euclidean')
+
+# Можно вывести так, но результат особо понятен не будет.
+# print(distance_matrix)
+
+# Будет что-то типа: 
+
+#array([[2.60000000e+01, 2.33000000e+02, 4.86499635e-05, 2.00000000e+00],
+#       [1.75000000e+02, 2.88000000e+02, 2.06715236e-03, 2.00000000e+00],
+#       [7.30000000e+01, 2.35000000e+02, 2.28654829e-03, 2.00000000e+00],
+#       ...,
+#       [5.93000000e+02, 5.95000000e+02, 9.42958023e+00, 1.23000000e+02],
+#       [5.94000000e+02, 5.96000000e+02, 1.08393604e+01, 2.36000000e+02],
+#       [5.92000000e+02, 5.97000000e+02, 1.14473478e+01, 3.00000000e+02]])
+
+df_good_looking = pd.DataFrame(distance_matrix, columns=['Cluster 1', 'Cluster 2', 'Distance', 'Size'])
+print(df_good_looking)
+
+# ======================================================================================================
+# Код строит дендрограмму для визуализации результатов иерархической кластеризации, используя матрицу 
+# расстояний distance_matrix, полученную ранее с помощью функции linkage. Для построения дендрограммы 
+# используется функция dendrogram из библиотеки scipy.cluster.hierarchy, а для отображения графика — 
+# библиотека matplotlib.
+# ======================================================================================================
+
+fig = plt.figure(figsize=(15, 30))
+fig.patch.set_facecolor('white')
+
+R = dendrogram(distance_matrix,
+               labels = df['surgical_lesion'].to_numpy(),
+               orientation='left',
+               leaf_font_size=12)
+
+plt.tight_layout()
+plt.show()
+
+# ======================================================================================================
