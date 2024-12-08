@@ -697,4 +697,86 @@ print('Silhouette score: %0.3f' % silhouette_score(scaled_data, labels))
 
 perform_visualization(scaled_data, labels) # ОТКЛЮЧИТЬ ПОТОМ, МНОГО ТРАТИТ!!!!
 
+# ======================================== MAMMOTH ФАЙЛ ================================================
+# Тут не нужно много расписывать. Происходит ровно то же самое, что и до этого, просто читайте код и 
+# смотрите логи, а также файлы визуализации.
 # ======================================================================================================
+
+df = pd.read_csv('WORK_FILES/mammoth.csv', nrows=100000).astype(np.float32)
+
+scaled_data = MinMaxScaler().fit_transform(df.to_numpy())
+
+df.head()
+
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+ax.scatter(df['x'], df['y'], df['z'], marker='o', s=0.5)
+
+ax.set_title('Трехмерный мамонт')
+
+plt.show()
+
+
+# ВЫЛЕЗАЕТ ОШИБКА - НУЖНО ИСПРАВИТЬ ПОТОМ
+
+# warnings.filterwarnings("ignore", message=".*KMeans is known to have a memory leak on Windows.*")
+
+# WCSS = []
+# Silh = []
+
+# for i in range(2, 21):
+#     kmeans = KMeans(n_clusters = i, init = 'k-means++',
+#                     max_iter = 300, n_init = 10, random_state = 0)
+
+#     cluster_labels = kmeans.fit_predict(scaled_data)
+
+#     WCSS.append(kmeans.inertia_)
+#     Silh.append(silhouette_score(scaled_data, cluster_labels, metric='euclidean'))
+
+# # =================================== Silh и Elbow ===================================================
+
+# fig, ax = plt.subplots(1, 2, figsize=(16, 8))
+
+# ax[0].plot(range(2, 21), Silh)
+# ax[0].set_title('Индекс кластерного анализа (Silhouette score)')
+# ax[0].set_xlabel('Число кластеров')
+# ax[0].set_ylabel('Silhouette score')
+
+# ax[1].plot(range(2, 21), WCSS)
+# ax[1].set_title('Метод локтя (elbow method)')
+# ax[1].set_xlabel('Число кластеров')
+# ax[1].set_ylabel('WCSS')
+
+# plt.tight_layout()
+# plt.show()
+
+# # =========================================== KMeans ================================================
+# # ТУТ ДВА КЛАСТЕРА
+
+# kmeans = KMeans(n_clusters = 2, init = 'k-means++',
+#                     max_iter = 300, n_init = 10, random_state = 0)
+
+# cluster_labels = kmeans.fit_predict(scaled_data)
+
+# perform_visualization(scaled_data, cluster_labels, kmeans.cluster_centers_)
+
+# # =========================================== KMeans ================================================
+# # ТУТ 6 КЛАСТЕРОВ
+
+# kmeans = KMeans(n_clusters = 6, init = 'k-means++',
+#                     max_iter = 300, n_init = 10, random_state = 0)
+
+# cluster_labels = kmeans.fit_predict(scaled_data)
+
+# perform_visualization(scaled_data, cluster_labels, kmeans.cluster_centers_)
+
+# # =========================================== KMeans ================================================
+# # ТУТ 10 КЛАСТЕРОВ
+
+# kmeans = KMeans(n_clusters = 10, init = 'k-means++',
+#                     max_iter = 300, n_init = 10, random_state = 0)
+
+# cluster_labels = kmeans.fit_predict(scaled_data)
+
+# perform_visualization(scaled_data, cluster_labels, kmeans.cluster_centers_)
